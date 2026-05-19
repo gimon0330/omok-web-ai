@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Mobile Gomoku AI</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="top">
+      <div>
+        <h1>오목 AI</h1>
+        <p id="status">흑돌을 두세요. 당신이 먼저 시작합니다.</p>
+      </div>
+      <button id="resetBtn" class="reset">새 게임</button>
+    </section>
+
+    <section class="panel">
+      <div class="controls">
+        <label>
+          AI 난이도
+          <select id="difficulty">
+            <option value="1">빠름</option>
+            <option value="2" selected>보통</option>
+            <option value="3">깊게 생각</option>
+          </select>
+        </label>
+        <label>
+          선공
+          <select id="firstPlayer">
+            <option value="human" selected>나</option>
+            <option value="ai">AI</option>
+          </select>
+        </label>
+      </div>
+
+      <div id="boardWrap" class="board-wrap">
+        <canvas id="board" width="720" height="720" aria-label="오목판"></canvas>
+      </div>
+
+      <div class="legend">
+        <span><i class="stone black"></i> 나</span>
+        <span><i class="stone white"></i> AI</span>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

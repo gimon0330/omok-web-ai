@@ -9,6 +9,8 @@
 
 * { box-sizing: border-box; }
 
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   min-height: 100%;
@@ -23,8 +25,6 @@ html, body {
   margin: 0 auto;
   padding: 18px 14px 28px;
 }
-
-.hidden { display: none !important; }
 
 .screen {
   min-height: calc(100dvh - 46px);

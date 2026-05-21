@@ -17,6 +17,7 @@ const canvas = document.getElementById("board");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
 const resetBtn = document.getElementById("resetBtn");
+const aiModelEl = document.getElementById("aiModel");
 const difficultyEl = document.getElementById("difficulty");
 const firstPlayerEl = document.getElementById("firstPlayer");
 
@@ -257,7 +258,8 @@ function aiMove() {
   if (!gameStarted || gameOver) return;
 
   const depth = Number(difficultyEl.value);
-  const move = GomokuAI.findBestMove(board, depth);
+  const model = aiModelEl.value;
+  const move = GomokuAI.findBestMove(board, { depth, model });
   if (move) place(move.r, move.c, AI);
 
   thinking = false;

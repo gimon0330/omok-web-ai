@@ -4,6 +4,15 @@ const HUMAN = 1; // black
 const AI = 2;    // white
 const DIRS = [[1,0], [0,1], [1,1], [1,-1]];
 
+const startScreen = document.getElementById("startScreen");
+const gameScreen = document.getElementById("gameScreen");
+const resultModal = document.getElementById("resultModal");
+const resultLabel = document.getElementById("resultLabel");
+const resultTitle = document.getElementById("resultTitle");
+const resultMessage = document.getElementById("resultMessage");
+const startBtn = document.getElementById("startBtn");
+const restartBtn = document.getElementById("restartBtn");
+const homeBtn = document.getElementById("homeBtn");
 const canvas = document.getElementById("board");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
@@ -16,6 +25,7 @@ let gameOver = false;
 let turn = HUMAN;
 let lastMove = null;
 let thinking = false;
+let gameStarted = false;
 
 function createBoard() {
   return Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
@@ -23,6 +33,7 @@ function createBoard() {
 
 function resizeCanvasForDpr() {
   const rect = canvas.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
   const dpr = window.devicePixelRatio || 1;
   canvas.width = Math.floor(rect.width * dpr);
   canvas.height = Math.floor(rect.height * dpr);
@@ -39,6 +50,7 @@ function cellMetrics() {
 
 function draw() {
   const { rect, padding, gap } = cellMetrics();
+  if (!rect.width || !rect.height) return;
   ctx.clearRect(0, 0, rect.width, rect.height);
 
   ctx.fillStyle = "#cf984d";
@@ -138,17 +150,57 @@ function place(r, c, player) {
 
   if (isWin(r, c, player)) {
     gameOver = true;
+    const result = player === HUMAN ? "win" : "lose";
     statusEl.textContent = player === HUMAN ? "승리했습니다." : "AI가 승리했습니다.";
+    showResult(result);
     return true;
   }
 
   if (isFull()) {
     gameOver = true;
     statusEl.textContent = "무승부입니다.";
+    showResult("draw");
     return true;
   }
 
   return true;
+}
+
+function showResult(result) {
+  const resultText = {
+    win: ["Victory", "승리했습니다", "AI보다 먼저 5목을 완성했습니다."],
+    lose: ["Defeat", "패배했습니다", "AI가 먼저 5목을 완성했습니다."],
+    draw: ["Draw", "무승부입니다", "더 이상 둘 수 있는 자리가 없습니다."]
+  }[result];
+
+  resultLabel.textContent = resultText[0];
+  resultTitle.textContent = resultText[1];
+  resultMessage.textContent = resultText[2];
+  resultModal.classList.remove("hidden");
+  resultModal.setAttribute("aria-hidden", "false");
+}
+
+function hideResult() {
+  resultModal.classList.add("hidden");
+  resultModal.setAttribute("aria-hidden", "true");
+}
+
+function showStart() {
+  gameStarted = false;
+  hideResult();
+  gameScreen.classList.add("hidden");
+  startScreen.classList.remove("hidden");
+}
+
+function showGame() {
+  gameStarted = true;
+  hideResult();
+  startScreen.classList.add("hidden");
+  gameScreen.classList.remove("hidden");
+  requestAnimationFrame(() => {
+    resizeCanvasForDpr();
+    reset();
+  });
 }
 
 function isFull() {
@@ -186,7 +238,7 @@ canvas.addEventListener("touchstart", e => {
 }, { passive: false });
 
 function onHumanMove(e) {
-  if (thinking || gameOver || turn !== HUMAN) return;
+  if (!gameStarted || thinking || gameOver || turn !== HUMAN) return;
   const cell = canvasToCell(e);
   if (!cell) return;
   if (!place(cell.r, cell.c, HUMAN)) return;
@@ -198,6 +250,7 @@ function onHumanMove(e) {
 }
 
 function aiMove() {
+  if (!gameStarted || gameOver) return;
   const depth = Number(difficultyEl.value);
   const move = findBestMove(depth);
   if (move) place(move.r, move.c, AI);
@@ -392,6 +445,7 @@ function reset() {
   gameOver = false;
   lastMove = null;
   thinking = false;
+  hideResult();
 
   if (firstPlayerEl.value === "ai") {
     turn = AI;
@@ -405,10 +459,10 @@ function reset() {
   }
 }
 
+startBtn.addEventListener("click", showGame);
+restartBtn.addEventListener("click", reset);
+homeBtn.addEventListener("click", showStart);
 resetBtn.addEventListener("click", reset);
-difficultyEl.addEventListener("change", reset);
-firstPlayerEl.addEventListener("change", reset);
 window.addEventListener("resize", resizeCanvasForDpr);
 
-resizeCanvasForDpr();
-reset();
+showStart();

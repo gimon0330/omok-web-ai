@@ -32,6 +32,10 @@ function createBoard() {
   return Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
 }
 
+function setVisible(element, visible) {
+  element.hidden = !visible;
+}
+
 function resizeCanvasForDpr() {
   const rect = canvas.getBoundingClientRect();
   if (!rect.width || !rect.height) return;
@@ -181,27 +185,27 @@ function showResult(result) {
   resultLabel.textContent = resultText[0];
   resultTitle.textContent = resultText[1];
   resultMessage.textContent = resultText[2];
-  resultModal.classList.remove("hidden");
+  setVisible(resultModal, true);
   resultModal.setAttribute("aria-hidden", "false");
 }
 
 function hideResult() {
-  resultModal.classList.add("hidden");
+  setVisible(resultModal, false);
   resultModal.setAttribute("aria-hidden", "true");
 }
 
 function showStart() {
   gameStarted = false;
   hideResult();
-  gameScreen.classList.add("hidden");
-  startScreen.classList.remove("hidden");
+  setVisible(gameScreen, false);
+  setVisible(startScreen, true);
 }
 
 function showGame() {
   gameStarted = true;
   hideResult();
-  startScreen.classList.add("hidden");
-  gameScreen.classList.remove("hidden");
+  setVisible(startScreen, false);
+  setVisible(gameScreen, true);
   requestAnimationFrame(() => {
     resizeCanvasForDpr();
     reset();

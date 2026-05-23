@@ -1,20 +1,20 @@
 const PolicyNetModel = (() => {
   const SIZE = GomokuCore.SIZE;
-  const EMPTY = GomokuCore.EMPTY;
   const HUMAN = GomokuCore.HUMAN;
   const AI = GomokuCore.AI;
-  let modelPromise = null;
+  const modelPromises = new Map();
 
   async function findBestMove(board, options = {}) {
     const fallback = () => GomokuCore.tacticalMove(board, Number(options.depth || 2) + 1);
+    const modelPath = options.modelPath || "./assets/policy-net/model.json";
 
     if (typeof tf === "undefined") return fallback();
 
     try {
-      const model = await loadModel();
+      const model = await loadModel(modelPath);
       if (!model) return fallback();
 
-      const candidates = GomokuCore.generateCandidates(board);
+      const candidates = orderCandidates(board, GomokuCore.generateCandidates(board)).slice(0, 32);
       const forced = GomokuCore.findImmediateTactic(board, candidates);
       if (forced) return forced;
 
@@ -31,12 +31,14 @@ const PolicyNetModel = (() => {
     }
   }
 
-  function loadModel() {
-    if (!modelPromise) {
-      modelPromise = tf.loadLayersModel("./assets/policy-net/model.json")
-        .catch(() => null);
+  function loadModel(modelPath) {
+    if (!modelPromises.has(modelPath)) {
+      modelPromises.set(
+        modelPath,
+        tf.loadLayersModel(modelPath).catch(() => null)
+      );
     }
-    return modelPromise;
+    return modelPromises.get(modelPath);
   }
 
   function encodeBoard(board) {
@@ -51,20 +53,32 @@ const PolicyNetModel = (() => {
     return data;
   }
 
+  function orderCandidates(board, candidates) {
+    return candidates
+      .map(move => ({
+        ...move,
+        tacticalScore: tacticalScore(board, move)
+      }))
+      .sort((a, b) => b.tacticalScore - a.tacticalScore);
+  }
+
   function selectMove(board, candidates, policy) {
     return candidates
       .map(move => {
         const idx = move.r * SIZE + move.c;
         const prior = policy[idx] || 0;
-        const tactical = GomokuCore.localMoveScore(board, move.r, move.c, AI)
-          + GomokuCore.moveThreatScore(board, move.r, move.c, AI)
-          + GomokuCore.moveThreatScore(board, move.r, move.c, HUMAN) * 1.15;
         return {
           ...move,
-          score: prior * 1_000_000 + tactical * 0.35
+          score: prior * 1_000_000 + move.tacticalScore * 0.35
         };
       })
       .sort((a, b) => b.score - a.score)[0];
+  }
+
+  function tacticalScore(board, move) {
+    return GomokuCore.localMoveScore(board, move.r, move.c, AI)
+      + GomokuCore.moveThreatScore(board, move.r, move.c, AI)
+      + GomokuCore.moveThreatScore(board, move.r, move.c, HUMAN) * 1.15;
   }
 
   return { findBestMove };

@@ -1,9 +1,6 @@
 importScripts(
   "./models/core.js",
-  "./models/greedy.js",
-  "./models/alpha-beta.js",
   "./models/tactical.js",
-  "./models/pattern.js",
   "./models/threat-space.js",
   "./models/mcts.js"
 );
@@ -16,23 +13,33 @@ try {
   console.warn("TensorFlow.js unavailable. Neural models will fallback.", error);
 }
 
+const policyModel = typeof PolicyNetModel !== "undefined" ? PolicyNetModel : TacticalModel;
+const valueModel = typeof ValueNetModel !== "undefined" ? ValueNetModel : TacticalModel;
+
 const models = {
-  greedy: GreedyModel,
-  search: AlphaBetaModel,
-  tactical: TacticalModel,
-  pattern: PatternModel,
-  threat: ThreatSpaceModel,
-  mcts: MCTSModel,
-  policy: typeof PolicyNetModel !== "undefined" ? PolicyNetModel : TacticalModel,
-  value: typeof ValueNetModel !== "undefined" ? ValueNetModel : TacticalModel
+  tactical: { engine: TacticalModel },
+  threat: { engine: ThreatSpaceModel },
+  mcts: { engine: MCTSModel },
+  policy300: {
+    engine: policyModel,
+    modelPath: "./assets/policy-net/model.json"
+  },
+  policy5000: {
+    engine: policyModel,
+    modelPath: "./assets/policy-net-1/model.json"
+  },
+  value: { engine: valueModel }
 };
 
 self.onmessage = async event => {
   const { id, board, model, depth } = event.data;
-  const selectedModel = models[model] || models.tactical;
+  const selected = models[model] || models.threat;
 
   try {
-    const move = await selectedModel.findBestMove(cloneBoard(board), { depth });
+    const move = await selected.engine.findBestMove(cloneBoard(board), {
+      depth,
+      modelPath: selected.modelPath
+    });
     self.postMessage({ id, move });
   } catch (error) {
     self.postMessage({

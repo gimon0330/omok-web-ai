@@ -82,6 +82,13 @@ html, body {
   margin-bottom: 14px;
 }
 
+.game-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+}
+
 h1 {
   margin: 0;
   font-size: 26px;
@@ -133,6 +140,11 @@ button {
 .reset {
   white-space: nowrap;
   box-shadow: 0 5px 14px rgba(60, 42, 30, 0.08);
+}
+
+.subtle {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.68);
 }
 
 .panel {

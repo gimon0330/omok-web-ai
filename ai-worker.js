@@ -4,7 +4,8 @@ importScripts(
   "./models/alpha-beta.js",
   "./models/tactical.js",
   "./models/pattern.js",
-  "./models/threat-space.js"
+  "./models/threat-space.js",
+  "./models/mcts.js"
 );
 
 const models = {
@@ -12,7 +13,8 @@ const models = {
   search: AlphaBetaModel,
   tactical: TacticalModel,
   pattern: PatternModel,
-  threat: ThreatSpaceModel
+  threat: ThreatSpaceModel,
+  mcts: MCTSModel
 };
 
 self.onmessage = event => {

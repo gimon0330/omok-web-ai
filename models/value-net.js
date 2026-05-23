@@ -28,7 +28,7 @@ const ValueNetModel = (() => {
 
     if (typeof tf === "undefined") return fallback();
 
-    const candidates = GomokuCore.generateCandidates(board);
+    const candidates = orderCandidates(board, GomokuCore.generateCandidates(board)).slice(0, 24);
     const forced = GomokuCore.findImmediateTactic(board, candidates);
     if (forced) return forced;
 
@@ -38,16 +38,13 @@ const ValueNetModel = (() => {
     let best = null;
     let bestScore = -Infinity;
 
-    for (const move of candidates.slice(0, 24)) {
+    for (const move of candidates) {
       board[move.r][move.c] = AI;
       const value = await evaluate(board, HUMAN);
       board[move.r][move.c] = 0;
 
       const netScore = value === null ? -Infinity : -value * 1_000_000;
-      const tactical = GomokuCore.localMoveScore(board, move.r, move.c, AI)
-        + GomokuCore.moveThreatScore(board, move.r, move.c, AI)
-        + GomokuCore.moveThreatScore(board, move.r, move.c, HUMAN) * 1.1;
-      const score = netScore + tactical * 0.35;
+      const score = netScore + move.tacticalScore * 0.35;
 
       if (score > bestScore) {
         bestScore = score;
@@ -77,6 +74,17 @@ const ValueNetModel = (() => {
       }
     }
     return data;
+  }
+
+  function orderCandidates(board, candidates) {
+    return candidates
+      .map(move => ({
+        ...move,
+        tacticalScore: GomokuCore.localMoveScore(board, move.r, move.c, AI)
+          + GomokuCore.moveThreatScore(board, move.r, move.c, AI)
+          + GomokuCore.moveThreatScore(board, move.r, move.c, HUMAN) * 1.1
+      }))
+      .sort((a, b) => b.tacticalScore - a.tacticalScore);
   }
 
   return { evaluate, findBestMove };

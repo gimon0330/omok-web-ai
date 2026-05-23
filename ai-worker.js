@@ -2,13 +2,17 @@ importScripts(
   "./models/core.js",
   "./models/greedy.js",
   "./models/alpha-beta.js",
-  "./models/tactical.js"
+  "./models/tactical.js",
+  "./models/pattern.js",
+  "./models/threat-space.js"
 );
 
 const models = {
   greedy: GreedyModel,
   search: AlphaBetaModel,
-  tactical: TacticalModel
+  tactical: TacticalModel,
+  pattern: PatternModel,
+  threat: ThreatSpaceModel
 };
 
 self.onmessage = event => {

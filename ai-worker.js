@@ -1,4 +1,5 @@
 importScripts(
+  "./rules/renju.js",
   "./models/core.js",
   "./models/tactical.js",
   "./models/threat-space.js",

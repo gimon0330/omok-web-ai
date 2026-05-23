@@ -27,9 +27,45 @@ let turn = HUMAN;
 let lastMove = null;
 let thinking = false;
 let gameStarted = false;
+let aiJobId = 0;
+let aiWorker = createAiWorker();
 
 function createBoard() {
   return Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
+}
+
+function createAiWorker() {
+  if (!window.Worker) return null;
+
+  const worker = new Worker("./ai-worker.js");
+  worker.onmessage = event => {
+    const { id, move, error } = event.data;
+    if (id !== aiJobId || !thinking || !gameStarted || gameOver) return;
+
+    if (error) {
+      console.error("AI worker error:", error);
+      statusEl.textContent = "AI 계산 중 오류가 발생했습니다.";
+      thinking = false;
+      turn = HUMAN;
+      return;
+    }
+
+    if (move) place(move.r, move.c, AI);
+
+    thinking = false;
+    if (!gameOver) {
+      turn = HUMAN;
+      statusEl.textContent = "당신의 차례입니다.";
+    }
+  };
+  worker.onerror = error => {
+    console.error("AI worker failed:", error);
+    statusEl.textContent = "AI Worker를 불러오지 못했습니다.";
+    thinking = false;
+    turn = HUMAN;
+  };
+
+  return worker;
 }
 
 function setVisible(element, visible) {
@@ -196,6 +232,7 @@ function hideResult() {
 
 function showStart() {
   gameStarted = false;
+  cancelAiJob();
   hideResult();
   setVisible(gameScreen, false);
   setVisible(startScreen, true);
@@ -261,29 +298,39 @@ function onHumanMove(e) {
 function aiMove() {
   if (!gameStarted || gameOver) return;
 
-  const depth = Number(difficultyEl.value);
-  const model = aiModelEl.value;
-  const move = GomokuAI.findBestMove(board, { depth, model });
-  if (move) place(move.r, move.c, AI);
-
-  thinking = false;
-  if (!gameOver) {
+  if (!aiWorker) {
+    statusEl.textContent = "이 브라우저는 AI Worker를 지원하지 않습니다.";
+    thinking = false;
     turn = HUMAN;
-    statusEl.textContent = "당신의 차례입니다.";
+    return;
   }
+
+  aiJobId += 1;
+  aiWorker.postMessage({
+    id: aiJobId,
+    board: board.map(row => row.slice()),
+    depth: Number(difficultyEl.value),
+    model: aiModelEl.value
+  });
+}
+
+function cancelAiJob() {
+  aiJobId += 1;
+  thinking = false;
 }
 
 function reset() {
+  cancelAiJob();
   board = createBoard();
   gameOver = false;
   lastMove = null;
-  thinking = false;
   hideResult();
 
   if (firstPlayerEl.value === "ai") {
     turn = AI;
     statusEl.textContent = "AI가 먼저 둡니다.";
     draw();
+    thinking = true;
     setTimeout(aiMove, 120);
   } else {
     turn = HUMAN;

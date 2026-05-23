@@ -11,8 +11,9 @@ importScripts(
 try {
   importScripts("https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js");
   importScripts("./models/policy-net.js");
+  importScripts("./models/value-net.js");
 } catch (error) {
-  console.warn("TensorFlow.js unavailable. PolicyNet will fallback.", error);
+  console.warn("TensorFlow.js unavailable. Neural models will fallback.", error);
 }
 
 const models = {
@@ -22,7 +23,8 @@ const models = {
   pattern: PatternModel,
   threat: ThreatSpaceModel,
   mcts: MCTSModel,
-  policy: typeof PolicyNetModel !== "undefined" ? PolicyNetModel : TacticalModel
+  policy: typeof PolicyNetModel !== "undefined" ? PolicyNetModel : TacticalModel,
+  value: typeof ValueNetModel !== "undefined" ? ValueNetModel : TacticalModel
 };
 
 self.onmessage = async event => {

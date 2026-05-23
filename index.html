@@ -19,13 +19,11 @@
         <label>
           AI 모델
           <select id="aiModel">
-            <option value="greedy">Greedy</option>
-            <option value="pattern">Pattern</option>
-            <option value="search">Alpha-Beta</option>
             <option value="tactical">Tactical</option>
             <option value="threat" selected>Threat Search</option>
             <option value="mcts">MCTS</option>
-            <option value="policy">PolicyNet</option>
+            <option value="policy300">PolicyNet 300</option>
+            <option value="policy5000">PolicyNet 5000</option>
             <option value="value">ValueNet</option>
           </select>
         </label>
@@ -54,7 +52,10 @@
           <h1>오목 AI</h1>
           <p id="status">흑돌을 두세요. 당신이 먼저 시작합니다.</p>
         </div>
-        <button id="resetBtn" class="reset">새 게임</button>
+        <div class="game-actions">
+          <button id="resetBtn" class="reset">새 게임</button>
+          <button id="backBtn" class="reset subtle">처음으로</button>
+        </div>
       </section>
 
       <section class="panel">

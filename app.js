@@ -13,6 +13,7 @@ const resultMessage = document.getElementById("resultMessage");
 const startBtn = document.getElementById("startBtn");
 const restartBtn = document.getElementById("restartBtn");
 const homeBtn = document.getElementById("homeBtn");
+const backBtn = document.getElementById("backBtn");
 const canvas = document.getElementById("board");
 const ctx = canvas.getContext("2d");
 const statusEl = document.getElementById("status");
@@ -347,6 +348,7 @@ canvas.addEventListener("touchstart", e => {
 startBtn.addEventListener("click", showGame);
 restartBtn.addEventListener("click", reset);
 homeBtn.addEventListener("click", showStart);
+backBtn.addEventListener("click", showStart);
 resetBtn.addEventListener("click", reset);
 window.addEventListener("resize", resizeCanvasForDpr);
 

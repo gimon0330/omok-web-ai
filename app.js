@@ -56,7 +56,7 @@ function createAiWorker() {
     thinking = false;
     if (!gameOver) {
       turn = HUMAN;
-      statusEl.textContent = "당신의 차례입니다.";
+      statusEl.textContent = "당신의 차례입니다. 흑은 장목, 쌍삼, 쌍사가 금수입니다.";
     }
   };
   worker.onerror = error => {
@@ -194,7 +194,7 @@ function place(r, c, player) {
   lastMove = { r, c };
   draw();
 
-  if (isWin(r, c, player)) {
+  if (RenjuRules.isWin(board, r, c, player)) {
     gameOver = true;
     const result = player === HUMAN ? "win" : "lose";
     statusEl.textContent = player === HUMAN ? "승리했습니다." : "AI가 승리했습니다.";
@@ -214,8 +214,8 @@ function place(r, c, player) {
 
 function showResult(result) {
   const resultText = {
-    win: ["Victory", "승리했습니다", "AI보다 먼저 5목을 완성했습니다."],
-    lose: ["Defeat", "패배했습니다", "AI가 먼저 5목을 완성했습니다."],
+    win: ["Victory", "승리했습니다", "렌주룰 기준으로 흑이 정확히 5목을 완성했습니다."],
+    lose: ["Defeat", "패배했습니다", "AI가 먼저 5목 이상을 완성했습니다."],
     draw: ["Draw", "무승부입니다", "더 이상 둘 수 있는 자리가 없습니다."]
   }[result];
 
@@ -254,39 +254,18 @@ function isFull() {
   return board.every(row => row.every(v => v !== EMPTY));
 }
 
-function isWin(r, c, player) {
-  for (const [dr, dc] of DIRS) {
-    let count = 1;
-    count += countDir(r, c, dr, dc, player);
-    count += countDir(r, c, -dr, -dc, player);
-    if (count >= 5) return true;
-  }
-  return false;
-}
-
-function countDir(r, c, dr, dc, player) {
-  let n = 0;
-  let nr = r + dr;
-  let nc = c + dc;
-
-  while (inside(nr, nc) && board[nr][nc] === player) {
-    n++;
-    nr += dr;
-    nc += dc;
-  }
-
-  return n;
-}
-
-function inside(r, c) {
-  return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
-}
-
 function onHumanMove(e) {
   if (!gameStarted || thinking || gameOver || turn !== HUMAN) return;
 
   const cell = canvasToCell(e);
   if (!cell) return;
+
+  const reason = RenjuRules.forbiddenReason(board, cell.r, cell.c, HUMAN);
+  if (reason) {
+    statusEl.textContent = `${reason} 다른 곳에 두세요.`;
+    return;
+  }
+
   if (!place(cell.r, cell.c, HUMAN)) return;
   if (gameOver) return;
 
@@ -329,13 +308,13 @@ function reset() {
 
   if (firstPlayerEl.value === "ai") {
     turn = AI;
-    statusEl.textContent = "AI가 먼저 둡니다.";
+    statusEl.textContent = "AI가 먼저 둡니다. 흑은 장목, 쌍삼, 쌍사가 금수입니다.";
     draw();
     thinking = true;
     setTimeout(aiMove, 120);
   } else {
     turn = HUMAN;
-    statusEl.textContent = "흑돌을 두세요. 당신이 먼저 시작합니다.";
+    statusEl.textContent = "흑돌을 두세요. 흑은 장목, 쌍삼, 쌍사가 금수입니다.";
     draw();
   }
 }

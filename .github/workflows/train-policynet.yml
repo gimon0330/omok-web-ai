@@ -1,0 +1,77 @@
+name: Train PolicyNet
+
+on:
+  workflow_dispatch:
+    inputs:
+      games:
+        description: "Number of self-play games"
+        required: true
+        default: "1000"
+      max_moves:
+        description: "Max moves per game"
+        required: true
+        default: "90"
+      epochs:
+        description: "Training epochs"
+        required: true
+        default: "8"
+      batch_size:
+        description: "Training batch size"
+        required: true
+        default: "256"
+
+permissions:
+  contents: write
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r training/requirements.txt
+
+      - name: Generate policy dataset
+        run: |
+          python training/generate_policy_data.py \
+            --games "${{ github.event.inputs.games }}" \
+            --max-moves "${{ github.event.inputs.max_moves }}" \
+            --out training/data/policy_data.npz
+
+      - name: Train and export PolicyNet
+        run: |
+          python training/train_policy_tfjs.py \
+            --data training/data/policy_data.npz \
+            --out assets/policy-net \
+            --epochs "${{ github.event.inputs.epochs }}" \
+            --batch-size "${{ github.event.inputs.batch_size }}"
+
+      - name: Upload trained model artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-net-model
+          path: assets/policy-net
+
+      - name: Commit trained model
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/policy-net
+          if git diff --cached --quiet; then
+            echo "No model changes to commit."
+          else
+            git commit -m "Train PolicyNet model"
+            git push
+          fi

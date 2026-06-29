@@ -2,13 +2,13 @@ const ValueNetModel = (() => {
   const SIZE = GomokuCore.SIZE;
   const HUMAN = GomokuCore.HUMAN;
   const AI = GomokuCore.AI;
-  let modelPromise = null;
+  const modelPromises = new Map();
 
-  async function evaluate(board, player = AI) {
+  async function evaluate(board, player = AI, modelPath = "./assets/value-net/model.json") {
     if (typeof tf === "undefined") return null;
 
     try {
-      const model = await loadModel();
+      const model = await loadModel(modelPath);
       if (!model) return null;
 
       const input = tf.tensor4d([encodeBoard(board, player)], [1, SIZE, SIZE, 3]);
@@ -24,23 +24,27 @@ const ValueNetModel = (() => {
   }
 
   async function findBestMove(board, options = {}) {
-    const fallback = () => GomokuCore.tacticalMove(board, Number(options.depth || 2) + 1);
+    const fallback = reason => {
+      setFallback(reason);
+      return GomokuCore.tacticalMove(board, Number(options.depth || 2) + 1);
+    };
+    const modelPath = options.modelPath || "./assets/value-net/model.json";
 
-    if (typeof tf === "undefined") return fallback();
+    if (typeof tf === "undefined") return fallback("tf is undefined");
 
     const candidates = orderCandidates(board, GomokuCore.generateCandidates(board)).slice(0, 24);
     const forced = GomokuCore.findImmediateTactic(board, candidates);
     if (forced) return forced;
 
-    const model = await loadModel();
-    if (!model) return fallback();
+    const model = await loadModel(modelPath);
+    if (!model) return fallback("model load failed");
 
     let best = null;
     let bestScore = -Infinity;
 
     for (const move of candidates) {
       board[move.r][move.c] = AI;
-      const value = await evaluate(board, HUMAN);
+      const value = await evaluate(board, HUMAN, modelPath);
       board[move.r][move.c] = 0;
 
       const netScore = value === null ? -Infinity : -value * 1_000_000;
@@ -52,15 +56,26 @@ const ValueNetModel = (() => {
       }
     }
 
-    return best || fallback();
+    return best || fallback("no selected move");
   }
 
-  function loadModel() {
-    if (!modelPromise) {
-      modelPromise = tf.loadLayersModel("./assets/value-net/model.json")
-        .catch(() => null);
+  function setFallback(reason) {
+    if (typeof self !== "undefined") {
+      self.__lastAiFallback = {
+        from: "ValueNetModel",
+        reason
+      };
     }
-    return modelPromise;
+  }
+
+  function loadModel(modelPath = "./assets/value-net/model.json") {
+    if (!modelPromises.has(modelPath)) {
+      modelPromises.set(
+        modelPath,
+        tf.loadLayersModel(modelPath).catch(() => null)
+      );
+    }
+    return modelPromises.get(modelPath);
   }
 
   function encodeBoard(board, player) {

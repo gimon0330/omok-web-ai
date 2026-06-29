@@ -40,7 +40,12 @@ function createAiWorker() {
 
   const worker = new Worker("./ai-worker.js");
   worker.onmessage = event => {
-    const { id, move, error } = event.data;
+    const { id, move, error, debug } = event.data;
+
+    if (debug) {
+      console.table(debug);
+    }
+
     if (id !== aiJobId || !thinking || !gameStarted || gameOver) return;
 
     if (error) {
@@ -56,7 +61,7 @@ function createAiWorker() {
     thinking = false;
     if (!gameOver) {
       turn = HUMAN;
-      statusEl.textContent = "당신의 차례입니다. 흑은 장목, 쌍삼, 쌍사가 금수입니다.";
+      statusEl.textContent = formatDebugStatus(debug) || "당신의 차례입니다. 흑은 장목, 쌍삼, 쌍사가 금수입니다.";
     }
   };
   worker.onerror = error => {
@@ -67,6 +72,16 @@ function createAiWorker() {
   };
 
   return worker;
+}
+
+function formatDebugStatus(debug) {
+  if (!debug) return "";
+
+  const fallback = debug.fallback
+    ? ` / fallback: ${debug.fallback.from} (${debug.fallback.reason})`
+    : "";
+
+  return `당신의 차례입니다. AI: ${debug.resolvedModel} / ${debug.engineName} / ${debug.elapsedMs}ms${fallback}`;
 }
 
 function setVisible(element, visible) {

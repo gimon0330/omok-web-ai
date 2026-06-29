@@ -5,14 +5,17 @@ const PolicyNetModel = (() => {
   const modelPromises = new Map();
 
   async function findBestMove(board, options = {}) {
-    const fallback = () => GomokuCore.tacticalMove(board, Number(options.depth || 2) + 1);
+    const fallback = reason => {
+      setFallback(reason);
+      return GomokuCore.tacticalMove(board, Number(options.depth || 2) + 1);
+    };
     const modelPath = options.modelPath || "./assets/policy-net/model.json";
 
-    if (typeof tf === "undefined") return fallback();
+    if (typeof tf === "undefined") return fallback("tf is undefined");
 
     try {
       const model = await loadModel(modelPath);
-      if (!model) return fallback();
+      if (!model) return fallback("model load failed");
 
       const candidates = orderCandidates(board, GomokuCore.generateCandidates(board)).slice(0, 32);
       const forced = GomokuCore.findImmediateTactic(board, candidates);
@@ -24,10 +27,20 @@ const PolicyNetModel = (() => {
       input.dispose();
       prediction.dispose();
 
-      return selectMove(board, candidates, policy) || fallback();
+      return selectMove(board, candidates, policy) || fallback("no selected move");
     } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
       console.warn("PolicyNet fallback:", error);
-      return fallback();
+      return fallback(reason);
+    }
+  }
+
+  function setFallback(reason) {
+    if (typeof self !== "undefined") {
+      self.__lastAiFallback = {
+        from: "PolicyNetModel",
+        reason
+      };
     }
   }
 

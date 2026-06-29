@@ -15,7 +15,6 @@ const PolicyNetModel = (() => {
 
     try {
       const model = await loadModel(modelPath);
-      if (!model) return fallback("model load failed");
 
       const candidates = orderCandidates(board, GomokuCore.generateCandidates(board)).slice(0, 32);
       const forced = GomokuCore.findImmediateTactic(board, candidates);
@@ -29,9 +28,9 @@ const PolicyNetModel = (() => {
 
       return selectMove(board, candidates, policy) || fallback("no selected move");
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
+      const reason = formatError(error);
       console.warn("PolicyNet fallback:", error);
-      return fallback(reason);
+      return fallback(`model load/predict failed: ${reason}`);
     }
   }
 
@@ -46,12 +45,18 @@ const PolicyNetModel = (() => {
 
   function loadModel(modelPath) {
     if (!modelPromises.has(modelPath)) {
-      modelPromises.set(
-        modelPath,
-        tf.loadLayersModel(modelPath).catch(() => null)
-      );
+      const promise = tf.loadLayersModel(modelPath).catch(error => {
+        modelPromises.delete(modelPath);
+        throw error;
+      });
+      modelPromises.set(modelPath, promise);
     }
     return modelPromises.get(modelPath);
+  }
+
+  function formatError(error) {
+    if (error instanceof Error) return error.message;
+    return String(error);
   }
 
   function encodeBoard(board) {

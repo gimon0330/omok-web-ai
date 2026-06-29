@@ -9,8 +9,6 @@ const ValueNetModel = (() => {
 
     try {
       const model = await loadModel(modelPath);
-      if (!model) return null;
-
       const input = tf.tensor4d([encodeBoard(board, player)], [1, SIZE, SIZE, 3]);
       const prediction = model.predict(input);
       const data = await prediction.data();
@@ -32,31 +30,36 @@ const ValueNetModel = (() => {
 
     if (typeof tf === "undefined") return fallback("tf is undefined");
 
-    const candidates = orderCandidates(board, GomokuCore.generateCandidates(board)).slice(0, 24);
-    const forced = GomokuCore.findImmediateTactic(board, candidates);
-    if (forced) return forced;
+    try {
+      const candidates = orderCandidates(board, GomokuCore.generateCandidates(board)).slice(0, 24);
+      const forced = GomokuCore.findImmediateTactic(board, candidates);
+      if (forced) return forced;
 
-    const model = await loadModel(modelPath);
-    if (!model) return fallback("model load failed");
+      await loadModel(modelPath);
 
-    let best = null;
-    let bestScore = -Infinity;
+      let best = null;
+      let bestScore = -Infinity;
 
-    for (const move of candidates) {
-      board[move.r][move.c] = AI;
-      const value = await evaluate(board, HUMAN, modelPath);
-      board[move.r][move.c] = 0;
+      for (const move of candidates) {
+        board[move.r][move.c] = AI;
+        const value = await evaluate(board, HUMAN, modelPath);
+        board[move.r][move.c] = 0;
 
-      const netScore = value === null ? -Infinity : -value * 1_000_000;
-      const score = netScore + move.tacticalScore * 0.35;
+        const netScore = value === null ? -Infinity : -value * 1_000_000;
+        const score = netScore + move.tacticalScore * 0.35;
 
-      if (score > bestScore) {
-        bestScore = score;
-        best = move;
+        if (score > bestScore) {
+          bestScore = score;
+          best = move;
+        }
       }
-    }
 
-    return best || fallback("no selected move");
+      return best || fallback("no selected move");
+    } catch (error) {
+      const reason = formatError(error);
+      console.warn("ValueNet fallback:", error);
+      return fallback(`model load/predict failed: ${reason}`);
+    }
   }
 
   function setFallback(reason) {
@@ -70,12 +73,18 @@ const ValueNetModel = (() => {
 
   function loadModel(modelPath = "./assets/value-net/model.json") {
     if (!modelPromises.has(modelPath)) {
-      modelPromises.set(
-        modelPath,
-        tf.loadLayersModel(modelPath).catch(() => null)
-      );
+      const promise = tf.loadLayersModel(modelPath).catch(error => {
+        modelPromises.delete(modelPath);
+        throw error;
+      });
+      modelPromises.set(modelPath, promise);
     }
     return modelPromises.get(modelPath);
+  }
+
+  function formatError(error) {
+    if (error instanceof Error) return error.message;
+    return String(error);
   }
 
   function encodeBoard(board, player) {
